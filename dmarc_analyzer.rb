@@ -5,12 +5,14 @@ require 'zip'
 
 class DmarcAnalyzerReport
   class Record
-    attr_reader :source_ip, :header_from, :count, :host, :spf_alignment, :dkim_alignment, :spf_result, :spf_domain, :dkim_result, :dkim_domain, :additional_dkim_results, :dmarc_pass, :arc_pass
+    attr_reader :source_ip, :report_provider, :header_from, :envelope_to, :count, :host, :spf_alignment, :dkim_alignment, :spf_result, :spf_domain, :dkim_result, :dkim_domain, :additional_dkim_results, :dmarc_pass, :arc_pass
 
-    def initialize(source_record)
+    def initialize(source_record, report_provider)
       @source_ip = source_record.source_ip
       @count = source_record.count
+      @report_provider = report_provider
       @header_from = source_record.header_from
+      @envelope_to = source_record.envelope_to
       begin
         @host = Resolv.getname(source_ip)
       rescue Resolv::ResolvError
@@ -46,7 +48,7 @@ class DmarcAnalyzerReport
     end
 
     def key
-      [source_ip, header_from, spf_alignment, dkim_alignment, spf_result, spf_domain, dkim_result, dkim_domain, additional_dkim_results, arc_pass]
+      [report_provider, source_ip, header_from, envelope_to, spf_alignment, dkim_alignment, spf_result, spf_domain, dkim_result, dkim_domain, additional_dkim_results, arc_pass]
     end
 
     def add_count(other_count)
@@ -54,7 +56,7 @@ class DmarcAnalyzerReport
     end
   end
 
-  attr_reader :records
+  attr_reader :records, :begin_at, :end_at
 
   def initialize(filename = nil)
     if filename
@@ -67,9 +69,12 @@ class DmarcAnalyzerReport
   def load(filename)
     xml_string = read_file(filename)
     report = DmarcParser::Report.new(xml_string)
+    report_provider = report.metadata.org_name
     @records = report.records.map do |source_record|
-      Record.new(source_record)
+      Record.new(source_record, report_provider)
     end
+    @begin_at = report.metadata.begin_at
+    @end_at = report.metadata.end_at
   end
 
   def merge!(other)
@@ -82,6 +87,8 @@ class DmarcAnalyzerReport
         hash[record.key] = record
       end
     end
+    @begin_at = [begin_at, other.begin_at].reject(&:nil?).min
+    @end_at = [end_at, other.end_at].reject(&:nil?).max
   end
 
   def to_csv
@@ -89,7 +96,9 @@ class DmarcAnalyzerReport
       header = [
         'Source IP',
         'Source Host Name',
+        'Report Provider',
         'Header From',
+        'Evelope To',
         'Mail Count',
         'DMARC OR ARC Result',
         'DMARC Result',
@@ -107,7 +116,9 @@ class DmarcAnalyzerReport
         row = [
           record.source_ip,
           record.host,
+          record.report_provider,
           record.header_from,
+          record.envelope_to,
           record.count,
           record.dmarc_or_arc_pass ? 'pass' : 'fail',
           record.dmarc_pass ? 'pass' : 'fail',
@@ -198,6 +209,7 @@ if info[:mail_total] > 0
   valid_transfer_percent = valid_transfer_count * 100.0 / info[:mail_total]
   invalid_percent = info[:dmarc_and_arc_fail_total] * 100.0 / info[:mail_total]
 end
+puts "期間: #{analyzer_report.begin_at} - #{analyzer_report.end_at}"
 puts "全メール: #{info[:mail_total]}"
 puts "正: #{info[:dmarc_or_arc_pass_total]} (#{format_float valid_percent}%)"
 puts "正(直接): #{info[:spf_alignment_pass_total]} (#{format_float valid_direct_percent}%)"
