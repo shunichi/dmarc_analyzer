@@ -11,12 +11,14 @@ GEM
     nokogiri (1.16.0-x86_64-linux)
       racc (~> 1.4)
     racc (1.7.3)
+    rubyzip (2.3.2)
 
 PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
   dmarc_parser!
+  rubyzip
 
 BUNDLED WITH
    2.4.21
