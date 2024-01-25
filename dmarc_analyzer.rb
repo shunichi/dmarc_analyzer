@@ -98,9 +98,9 @@ class DmarcAnalyzerReport
         'Source Host Name',
         'Report Provider',
         'Header From',
-        'Evelope To',
+        'Envelope To',
         'Mail Count',
-        'DMARC OR ARC Result',
+        'DMARC or ARC Result',
         'DMARC Result',
         'ARC Result',
         'SPF Alignment',
@@ -109,7 +109,7 @@ class DmarcAnalyzerReport
         'SPF Domain',
         'DKIM Result',
         'DKIM Domain',
-        'Additonal DKIM',
+        'Additional DKIM',
       ]
       csv << header
       records.each do |record|
@@ -224,7 +224,7 @@ puts "Pass(direct): #{info[:spf_alignment_pass_total]} (#{format_float valid_dir
 puts "Pass(transfer): #{valid_transfer_count} (#{format_float valid_transfer_percent}%)"
 puts "Fail: #{info[:dmarc_and_arc_fail_total]} (#{format_float invalid_percent}%)"
 
-puts "By providers:"
+puts "By Providers:"
 info[:count_by_providers].each do |provider, count_hash|
   total = count_hash[:mail_total]
   pass_count = count_hash[:dmarc_or_arc_pass_total]
